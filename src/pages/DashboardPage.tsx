@@ -6,10 +6,12 @@ import LeaderboardCard from '../components/leaderboard/LeaderboardCard';
 import PortfolioSummary from '../components/portfolio/PortfolioSummary';
 import RecentActivities from '../components/dashboard/RecentActivities';
 import StockChart from '../components/charts/StockChart';
-import { useCompetition } from '../contexts/CompetitionContext';
+import { useLeaderboard } from '../hooks/useLeaderboard';
+import { useUser } from '../contexts/UserContext';
 
 const DashboardPage: React.FC = () => {
-  const { activeCompetition } = useCompetition();
+  const { leaderboard, loading: leaderboardLoading } = useLeaderboard(true); // Auto-refresh every 5 minutes
+  const { profile, portfolioValue } = useUser();
   
   return (
     <div className="space-y-6">
@@ -17,38 +19,42 @@ const DashboardPage: React.FC = () => {
         <div className="lg:col-span-2 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="card p-4">
-              <p className="text-sm font-medium text-gray-400">Active Competitions</p>
+              <p className="text-sm font-medium text-gray-400">Your Rank</p>
               <div className="mt-2 flex items-end justify-between">
-                <p className="text-2xl font-bold">3</p>
+                <p className="text-2xl font-bold">
+                  {profile ? (
+                    leaderboard.find(entry => entry.id === profile.id)?.rank || 'N/A'
+                  ) : 'N/A'}
+                </p>
                 <Award className="text-primary-500" size={24} />
               </div>
-              <div className="mt-2 flex items-center text-success-500 text-sm">
-                <ArrowUpRight size={16} />
-                <span className="ml-1">+1 this week</span>
+              <div className="mt-2 flex items-center text-primary-500 text-sm">
+                <span className="ml-1">of {leaderboard.length} players</span>
               </div>
             </div>
             
             <div className="card p-4">
               <p className="text-sm font-medium text-gray-400">Portfolio Value</p>
               <div className="mt-2 flex items-end justify-between">
-                <p className="text-2xl font-bold">$127,463</p>
+                <p className="text-2xl font-bold">${portfolioValue.toLocaleString()}</p>
                 <TrendingUp className="text-success-500" size={24} />
               </div>
               <div className="mt-2 flex items-center text-success-500 text-sm">
                 <ArrowUpRight size={16} />
-                <span className="ml-1">+2.3% today</span>
+                <span className="ml-1">Stocks only</span>
               </div>
             </div>
             
             <div className="card p-4">
-              <p className="text-sm font-medium text-gray-400">Monkey Status</p>
+              <p className="text-sm font-medium text-gray-400">Total Value</p>
               <div className="mt-2 flex items-end justify-between">
-                <p className="text-2xl font-bold text-error-500">Losing</p>
-                <span className="text-2xl">🐒</span>
+                <p className="text-2xl font-bold">
+                  ${profile ? (profile.cash + portfolioValue).toLocaleString() : '0'}
+                </p>
+                <span className="text-2xl">💰</span>
               </div>
-              <div className="mt-2 flex items-center text-error-500 text-sm">
-                <ArrowDownRight size={16} />
-                <span className="ml-1">-1.2% behind you</span>
+              <div className="mt-2 flex items-center text-accent-500 text-sm">
+                <span className="ml-1">Cash + Stocks</span>
               </div>
             </div>
           </div>
@@ -70,7 +76,7 @@ const DashboardPage: React.FC = () => {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Recent Activities</h2>
-              <Link to="/portfolio" className="text-xs text-primary-400 hover:text-primary-300">
+              <Link to="/profile" className="text-xs text-primary-400 hover:text-primary-300">
                 View all
               </Link>
             </div>
@@ -125,27 +131,29 @@ const DashboardPage: React.FC = () => {
           <div className="card p-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Portfolio Summary</h2>
-              <Link to="/portfolio" className="text-xs text-primary-400 hover:text-primary-300">
+              <Link to="/profile" className="text-xs text-primary-400 hover:text-primary-300">
                 Manage
               </Link>
             </div>
             <PortfolioSummary />
           </div>
           
-          {activeCompetition && (
-            <div className="card p-4">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold">Leaderboard</h2>
-                <Link 
-                  to={`/leaderboard/${activeCompetition.id}`} 
-                  className="text-xs text-primary-400 hover:text-primary-300"
-                >
-                  View all
-                </Link>
-              </div>
-              <LeaderboardCard limit={5} competitionId={activeCompetition.id} />
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">Top Players</h2>
+              <Link 
+                to="/leaderboard" 
+                className="text-xs text-primary-400 hover:text-primary-300"
+              >
+                View all
+              </Link>
             </div>
-          )}
+            <LeaderboardCard 
+              entries={leaderboard} 
+              loading={leaderboardLoading}
+              limit={5} 
+            />
+          </div>
         </div>
       </div>
     </div>

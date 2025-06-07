@@ -1,18 +1,25 @@
 import React from 'react';
-import { ArrowUp, ArrowDown, Loader2 } from 'lucide-react';
-import { useUser } from '../../contexts/UserContext';
-import { useCompetition } from '../../contexts/CompetitionContext';
+import { ArrowUp, ArrowDown, Loader2, Trophy } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 import { cn } from '../../lib/utils';
 
-interface LeaderboardCardProps {
-  limit?: number;
-  competitionId: string;
+interface LeaderboardEntry {
+  id: string;
+  username: string;
+  totalValue: number;
+  cash: number;
+  stockValue: number;
+  rank: number;
 }
 
-const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ limit = 10, competitionId }) => {
-  const { user, loading } = useUser();
-  const { getCompetitionById } = useCompetition();
-  const competition = getCompetitionById(competitionId);
+interface LeaderboardCardProps {
+  entries: LeaderboardEntry[];
+  loading?: boolean;
+  limit?: number;
+}
+
+const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ entries, loading = false, limit = 5 }) => {
+  const { user } = useAuth();
   
   if (loading) {
     return (
@@ -22,72 +29,79 @@ const LeaderboardCard: React.FC<LeaderboardCardProps> = ({ limit = 10, competiti
     );
   }
 
-  if (!user || !competition) {
-    return null;
+  if (!entries || entries.length === 0) {
+    return (
+      <div className="text-center text-gray-400 py-8">
+        <p>No leaderboard data available</p>
+      </div>
+    );
   }
   
-  const topParticipants = competition.participants.slice(0, limit);
+  const displayEntries = entries.slice(0, limit);
+  
+  const getRankIcon = (rank: number) => {
+    switch (rank) {
+      case 1:
+        return <Trophy className="w-5 h-5 text-yellow-500" />;
+      case 2:
+        return <Trophy className="w-5 h-5 text-gray-400" />;
+      case 3:
+        return <Trophy className="w-5 h-5 text-amber-700" />;
+      default:
+        return <span className="text-sm font-bold text-gray-400">#{rank}</span>;
+    }
+  };
   
   return (
     <div className="space-y-3">
-      {topParticipants.map((participant, index) => {
-        const isUser = participant.id === user.id;
-        const isMonkey = participant.id === 'monkey';
-        const isPositiveChange = participant.performanceChange > 0;
+      {displayEntries.map((entry, index) => {
+        const isUser = entry.id === user?.id;
         
         return (
           <div 
-            key={participant.id}
+            key={entry.id}
             className={cn(
               "flex items-center p-3 rounded-lg transition-all",
               isUser ? "bg-primary-900/40 border border-primary-800" : "bg-dark-300",
-              isMonkey && "border border-warning-800",
               "hover:bg-dark-200 cursor-pointer animate-slide-up"
             )}
             style={{ animationDelay: `${index * 50}ms` }}
           >
-            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-dark-100 text-sm font-semibold">
-              {index + 1}
+            <div className="flex items-center justify-center w-8 h-8 mr-3">
+              {getRankIcon(entry.rank)}
             </div>
             
-            <div className="ml-3 flex-1">
+            <div className="flex-1">
               <div className="flex items-center">
                 <img 
-                  src={participant.profileImage} 
-                  alt={participant.name}
+                  src={`https://api.dicebear.com/7.x/initials/svg?seed=${entry.username}`}
+                  alt={entry.username}
                   className={cn(
                     "w-8 h-8 rounded-full object-cover",
-                    isUser && "border-2 border-primary-500",
-                    isMonkey && "border-2 border-warning-500"
+                    isUser && "border-2 border-primary-500"
                   )}
                 />
                 <div className="ml-2">
                   <p className="text-sm font-medium flex items-center">
-                    {participant.name}
-                    {isMonkey && (
-                      <span className="ml-1 text-lg\" role="img\" aria-label="monkey">
-                        🐒
+                    {entry.username}
+                    {isUser && (
+                      <span className="ml-2 text-xs bg-primary-900 text-primary-400 px-2 py-0.5 rounded-full">
+                        You
                       </span>
                     )}
                   </p>
-                  <p className="text-xs text-gray-400">{participant.title}</p>
+                  <p className="text-xs text-gray-400">
+                    Cash: ${entry.cash.toLocaleString()} | Stocks: ${entry.stockValue.toLocaleString()}
+                  </p>
                 </div>
               </div>
             </div>
             
             <div className="text-right">
-              <p className="text-sm font-semibold">${participant.portfolioValue.toLocaleString()}</p>
-              <p className={cn(
-                "text-xs flex items-center justify-end",
-                isPositiveChange ? "text-success-500" : "text-error-500"
-              )}>
-                {isPositiveChange ? (
-                  <ArrowUp size={12} className="mr-0.5" />
-                ) : (
-                  <ArrowDown size={12} className="mr-0.5" />
-                )}
-                {Math.abs(participant.performanceChange).toFixed(2)}%
+              <p className="text-sm font-semibold text-success-500">
+                ${entry.totalValue.toLocaleString()}
               </p>
+              <p className="text-xs text-gray-400">Total Value</p>
             </div>
           </div>
         );

@@ -1,9 +1,14 @@
-import React from 'react';
-import { Menu, Bell, ChevronDown, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Menu, Bell, ChevronDown, Loader2, X } from 'lucide-react';
 import { useUser } from '../../contexts/UserContext';
 import { useAuth } from '../../contexts/AuthContext';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onMenuToggle?: () => void;
+  isMobileMenuOpen?: boolean;
+}
+
+const Header: React.FC<HeaderProps> = ({ onMenuToggle, isMobileMenuOpen }) => {
   const { profile, loading } = useUser();
   const { signOut } = useAuth();
   
@@ -22,8 +27,11 @@ const Header: React.FC = () => {
   return (
     <header className="sticky top-0 z-10 flex items-center justify-between h-16 px-4 bg-dark-400 border-b border-dark-100">
       <div className="flex items-center md:hidden">
-        <button className="p-2 rounded-lg text-gray-400 hover:text-gray-100 hover:bg-dark-300">
-          <Menu size={20} />
+        <button 
+          onClick={onMenuToggle}
+          className="p-2 rounded-lg text-gray-400 hover:text-gray-100 hover:bg-dark-300"
+        >
+          {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
         <h1 className="ml-2 text-xl font-bold bg-gradient-to-r from-primary-400 to-secondary-400 bg-clip-text text-transparent md:hidden">
           Winvest

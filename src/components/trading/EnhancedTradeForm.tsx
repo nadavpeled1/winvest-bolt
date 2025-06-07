@@ -145,7 +145,7 @@ const EnhancedTradeForm: React.FC = () => {
             />
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             {searching && (
-              <Loader2 className="absolute right-16 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" size={16} />
+              <Loader2 className="absolute right-16 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin\" size={16} />
             )}
             <button
               onClick={() => handleSearch()}

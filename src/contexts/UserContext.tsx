@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '../lib/supabase';
+import { calculatePortfolioValue, getHoldingsWithPrices } from '../lib/marketstack';
 
 interface UserProfile {
   id: string;
@@ -15,12 +16,23 @@ interface Holding {
   amount: number;
 }
 
+interface HoldingWithPrice extends Holding {
+  current_price: number;
+  current_value: number;
+  name: string;
+  change?: number;
+  changePercent?: number;
+}
+
 interface UserContextType {
   profile: UserProfile | null;
   holdings: Holding[];
+  holdingsWithPrices: HoldingWithPrice[];
+  portfolioValue: number;
   loading: boolean;
   fetchUserData: () => Promise<void>;
   updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  refreshPrices: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -28,6 +40,8 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [holdings, setHoldings] = useState<Holding[]>([]);
+  const [holdingsWithPrices, setHoldingsWithPrices] = useState<HoldingWithPrice[]>([]);
+  const [portfolioValue, setPortfolioValue] = useState(0);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
@@ -35,6 +49,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) {
       setProfile(null);
       setHoldings([]);
+      setHoldingsWithPrices([]);
+      setPortfolioValue(0);
       setLoading(false);
       return;
     }
@@ -83,10 +99,40 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       setProfile(profileData);
       setHoldings(holdingsData || []);
+
+      // Calculate portfolio value and get holdings with current prices
+      if (holdingsData && holdingsData.length > 0) {
+        const [portfolioVal, holdingsWithCurrentPrices] = await Promise.all([
+          calculatePortfolioValue(holdingsData),
+          getHoldingsWithPrices(holdingsData)
+        ]);
+        
+        setPortfolioValue(portfolioVal);
+        setHoldingsWithPrices(holdingsWithCurrentPrices);
+      } else {
+        setPortfolioValue(0);
+        setHoldingsWithPrices([]);
+      }
     } catch (error) {
       console.error('Error fetching user data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshPrices = async () => {
+    if (holdings.length > 0) {
+      try {
+        const [portfolioVal, holdingsWithCurrentPrices] = await Promise.all([
+          calculatePortfolioValue(holdings),
+          getHoldingsWithPrices(holdings)
+        ]);
+        
+        setPortfolioValue(portfolioVal);
+        setHoldingsWithPrices(holdingsWithCurrentPrices);
+      } catch (error) {
+        console.error('Error refreshing prices:', error);
+      }
     }
   };
 
@@ -112,8 +158,28 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     fetchUserData();
   }, [user]);
 
+  // Refresh prices every 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (holdings.length > 0) {
+        refreshPrices();
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [holdings]);
+
   return (
-    <UserContext.Provider value={{ profile, holdings, loading, fetchUserData, updateProfile }}>
+    <UserContext.Provider value={{ 
+      profile, 
+      holdings, 
+      holdingsWithPrices,
+      portfolioValue,
+      loading, 
+      fetchUserData, 
+      updateProfile,
+      refreshPrices
+    }}>
       {children}
     </UserContext.Provider>
   );

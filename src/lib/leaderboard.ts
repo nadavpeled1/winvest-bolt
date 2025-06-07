@@ -14,7 +14,7 @@ export interface LeaderboardEntry {
 export interface StockPriceCache {
   symbol: string;
   price: number;
-  lastUpdated: string;
+  last_updated: string;
 }
 
 // Cache stock prices for 24 hours to minimize API calls
@@ -60,7 +60,7 @@ export const updateStockPricesCache = async (): Promise<void> => {
           return {
             symbol,
             price: stockData.price,
-            lastUpdated: new Date().toISOString()
+            last_updated: new Date().toISOString()
           };
         } catch (error) {
           console.warn(`Failed to update price for ${symbol}:`, error);
@@ -194,13 +194,13 @@ export const getLastPriceUpdateTime = async (): Promise<string | null> => {
   try {
     const { data, error } = await supabase
       .from('stock_price_cache')
-      .select('lastUpdated')
-      .order('lastUpdated', { ascending: false })
+      .select('last_updated')
+      .order('last_updated', { ascending: false })
       .limit(1)
       .single();
 
     if (error || !data) return null;
-    return data.lastUpdated;
+    return data.last_updated;
   } catch (error) {
     console.error('Error getting last price update time:', error);
     return null;
